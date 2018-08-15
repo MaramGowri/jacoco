@@ -18,11 +18,11 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.MethodNode;
 
 /**
- * Unit tests for {@link KotlinWhenSealedFilter}.
+ * Unit tests for {@link KotlinWhenFilter}.
  */
-public class KotlinWhenSealedFilterTest extends FilterTestBase {
+public class KotlinWhenFilterTest extends FilterTestBase {
 
-	private final KotlinWhenSealedFilter filter = new KotlinWhenSealedFilter();
+	private final KotlinWhenFilter filter = new KotlinWhenFilter();
 
 	private final MethodNode m = new MethodNode(InstrSupport.ASM_API_VERSION, 0,
 			"name", "()V", null, null);
@@ -77,6 +77,31 @@ public class KotlinWhenSealedFilterTest extends FilterTestBase {
 		filter.filter(m, context, output);
 
 		assertIgnored();
+	}
+
+	@Test
+	public void should_filter_implicit_default() {
+		final Label label = new Label();
+
+		m.visitInsn(Opcodes.NOP);
+
+		m.visitTableSwitchInsn(0, 3, label);
+
+		m.visitInsn(Opcodes.NOP);
+
+		final Range range1 = new Range();
+		m.visitLabel(label);
+		range1.fromInclusive = m.instructions.getLast();
+		m.visitTypeInsn(Opcodes.NEW, "kotlin/NoWhenBranchMatchedException");
+		m.visitInsn(Opcodes.DUP);
+		m.visitMethodInsn(Opcodes.INVOKESPECIAL,
+			"kotlin/NoWhenBranchMatchedException", "<init>", "()V", false);
+		m.visitInsn(Opcodes.ATHROW);
+		range1.toInclusive = m.instructions.getLast();
+
+		filter.filter(m, context, output);
+
+		assertIgnored(range1);
 	}
 
 }
